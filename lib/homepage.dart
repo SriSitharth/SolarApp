@@ -12,6 +12,7 @@ class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key}) : super(key: key);
 
   @override
+  // ignore: library_private_types_in_public_api
   _MyHomePageState createState() => _MyHomePageState();
 }
 
@@ -19,6 +20,7 @@ class _MyHomePageState extends State<MyHomePage> {
   final _formKey = GlobalKey<FormState>();
   String selectedOffice = "0";
   List<String> officeNameList = [];
+  // ignore: non_constant_identifier_names
   late TextEditingController EbController;
   Map<String, TextEditingController> unitControllers = {};
   Map<String, TextEditingController> loadControllers = {};
@@ -165,7 +167,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(FontAwesomeIcons.userPlus),
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => Addproduct()));
+                    MaterialPageRoute(builder: (context) => const Addproduct()));
               },
             ),
             const Divider(
@@ -187,7 +189,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(FontAwesomeIcons.table),
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => Tabledata()));
+                    MaterialPageRoute(builder: (context) => const Tabledata()));
               },
             ),
             const Divider(
