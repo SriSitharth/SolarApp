@@ -16,6 +16,8 @@ class _TabledataState extends State<Tabledata> {
   Map<String, List<String>> invertersByOffice = {};
   List<Map<String, dynamic>> loadList = [];
   List<Map<String, dynamic>> unitList = [];
+  List<Map<String, dynamic>> ebReadingsList = [];
+  List<Map<String, dynamic>> combinedValues = [];
   String selectedOffice = "0";
   String selectedInverter = "0";
 
@@ -65,9 +67,9 @@ class _TabledataState extends State<Tabledata> {
         await FirebaseFirestore.instance.collection('office_list').get();
     officeList.clear();
     invertersByOffice.clear();
-    snapshot.docs.forEach((office) {
+    for (var office in snapshot.docs) {
       officeList.add(office['OfficeName'] as String);
-    });
+    }
     for (var i = 0; i < officeList.length; i++) {
       int docid = i + 1;
       final QuerySnapshot<Map<String, dynamic>> invertersnapshot =
@@ -88,11 +90,18 @@ class _TabledataState extends State<Tabledata> {
           await searchForLoadValues(fromDate, toDate, officeId, inverterId);
       final List<Map<String, dynamic>> unitdata =
           await searchForUnitValues(fromDate, toDate, officeId, inverterId);
+      final List<Map<String, dynamic>> ebReadingsData =
+          await searchForEBReadings(officeId, fromDate, toDate);
+      final List<Map<String, dynamic>> combinedData =
+          await searchForCombinedValues(fromDate, toDate, officeId, inverterId);
       setState(() {
         loadList = loaddata;
         unitList = unitdata;
+        ebReadingsList = ebReadingsData;
+        combinedValues = combinedData;
       });
     } catch (e) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Error fetching data : $e'),
         duration: const Duration(seconds: 5),
@@ -111,8 +120,10 @@ class _TabledataState extends State<Tabledata> {
   Widget build(BuildContext context) {
     double loadAvg = 0.0;
     double unitAvg = 0.0;
+    double ebAvg = 0.0;
     int loadCount = 0;
     int unitCount = 0;
+    int ebCount = 0;
     return Scaffold(
       appBar: AppBar(title: const Text("Data Table")),
       body: SingleChildScrollView(
@@ -234,7 +245,6 @@ class _TabledataState extends State<Tabledata> {
                     padding: const EdgeInsets.all(14.0),
                   );
                 }),
-
             const Divider(
               height: 0.3,
             ),
@@ -244,22 +254,18 @@ class _TabledataState extends State<Tabledata> {
                 padding: const EdgeInsets.only(top: 20.0),
                 child: DataTable(
                   columns: const [
-                    DataColumn(label: Text('Inverter')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Load')),
-                    
+                    DataColumn(label: Text('Date & Time')),
+                    DataColumn(label: Text('EB Reading')),
                   ],
-                  
-                  rows: loadList.map(
-                    (load) {
-                      loadAvg = loadAvg + load['value'];
-                      loadCount = loadCount + 1;
+                  rows: ebReadingsList.map(
+                    (ebReading) {
+                      ebAvg = ebAvg + ebReading['value'];
+                      ebCount = ebCount + 1;
                       return DataRow(
                         cells: [
-                          DataCell(Text(load['inv'].toString())),
                           DataCell(
-                              Text(formatDateTime(load['timestamp']).toString())),
-                          DataCell(Text(load['value'].toString())),
+                              Text(formatDateTime(ebReading['timestamp']).toString())),
+                          DataCell(Text(ebReading['value'].toString())),
                         ],
                       );
                     },
@@ -267,15 +273,88 @@ class _TabledataState extends State<Tabledata> {
                 ),
               ),
             ),
-            const Divider(
-              height: 0.3,
-            ),
-            Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}',
-                style: const TextStyle(fontSize: 16)),
 
             const Divider(
               height: 0.3,
             ),
+            Text('Average EB : ${ebCount > 0 ? (ebAvg / ebCount).toStringAsFixed(2) : "N/A"}',
+                style: const TextStyle(fontSize: 16)),
+            const Divider(
+              height: 0.3,
+            ),
+
+            // Center(
+            //   child: Container(
+            //     padding: const EdgeInsets.only(top: 20.0),
+            //     child: DataTable(
+            //       columns: const [
+            //         DataColumn(label: Text('Inverter')),
+            //         DataColumn(label: Text('Date & Time')),
+            //         DataColumn(label: Text('Load')),
+                    
+            //       ],
+                  
+            //       rows: loadList.map(
+            //         (load) {
+            //           loadAvg = loadAvg + load['value'];
+            //           loadCount = loadCount + 1;
+            //           return DataRow(
+            //             cells: [
+            //               DataCell(Text(load['inv'].toString())),
+            //               DataCell(
+            //                   Text(formatDateTime(load['timestamp']).toString())),
+            //               DataCell(Text(load['value'].toString())),
+            //             ],
+            //           );
+            //         },
+            //       ).toList(),
+            //     ),
+            //   ),
+            // ),
+            // const Divider(
+            //   height: 0.3,
+            // ),
+            // Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}',
+            //     style: const TextStyle(fontSize: 16)),
+
+            // const Divider(
+            //   height: 0.3,
+            // ),
+
+            // Center(
+            //   child: Container(
+            //     padding: const EdgeInsets.only(top: 20.0),
+            //     child: DataTable(
+            //       columns: const [
+            //         DataColumn(label: Text('Inverter')),
+            //         DataColumn(label: Text('Date & Time')),
+            //         DataColumn(label: Text('Unit')),
+            //       ],
+            //       rows: unitList.map(
+            //         (unit) {
+            //           unitAvg = unitAvg + unit['value'];
+            //           unitCount = unitCount + 1;
+            //           return DataRow(
+            //             cells: [
+            //               DataCell(Text(unit['inv'].toString())),
+            //               DataCell(
+            //                   Text(formatDateTime(unit['timestamp']).toString())),
+            //               DataCell(Text(unit['value'].toString())),
+            //             ],
+            //           );
+            //         },
+            //       ).toList(),
+            //     ),
+            //   ),
+            // ),
+            // const Divider(
+            //   height: 0.3,
+            // ),
+            // Text('Average Unit : ${unitCount > 0 ? (unitAvg / unitCount).toStringAsFixed(2) : "N/A"}',
+            //     style: const TextStyle(fontSize: 16)),
+            // const Divider(
+            //   height: 0.3,
+            // ),
 
             Center(
               child: Container(
@@ -283,19 +362,23 @@ class _TabledataState extends State<Tabledata> {
                 child: DataTable(
                   columns: const [
                     DataColumn(label: Text('Inverter')),
-                    DataColumn(label: Text('Date')),
+                    DataColumn(label: Text('Date/Time')),
+                    DataColumn(label: Text('Load')),
                     DataColumn(label: Text('Unit')),
                   ],
-                  rows: unitList.map(
-                    (unit) {
-                      unitAvg = unitAvg + unit['value'];
+                  rows: combinedValues.map(
+                    (comb) {
+                      loadAvg = loadAvg + comb['loadValue'];
+                      loadCount = loadCount + 1;
+                      unitAvg = unitAvg + comb['unitValue'];
                       unitCount = unitCount + 1;
                       return DataRow(
                         cells: [
-                          DataCell(Text(unit['inv'].toString())),
+                          DataCell(Text(comb['inv'].toString())),
                           DataCell(
-                              Text(formatDateTime(unit['timestamp']).toString())),
-                          DataCell(Text(unit['value'].toString())),
+                              Text(formatDateTime(comb['timestamp']).toString())),
+                          DataCell(Text(comb['loadValue'].toString())),
+                          DataCell(Text(comb['unitValue'].toString())),
                         ],
                       );
                     },
@@ -306,8 +389,8 @@ class _TabledataState extends State<Tabledata> {
             const Divider(
               height: 0.3,
             ),
-            Text('Average Unit : ${unitCount > 0 ? (unitAvg / unitCount).toStringAsFixed(2) : "N/A"}',
-                style: const TextStyle(fontSize: 16)),
+            Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}   /  Average Unit : ${unitCount > 0 ? (unitAvg / unitCount).toStringAsFixed(2) : "N/A"}',
+            ),
             const Divider(
               height: 0.3,
             ),
@@ -322,21 +405,18 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
     DateTime toDate, String officeId, String inverterId) async {
   final List<Map<String, dynamic>> loadValues = [];
   final List<String> inverterList = [];
-
   if (officeId != "0") {
     if (inverterId != "0") {
       final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
           .collection('office_list/$officeId/inverter_list/$inverterId/load')
           .get();
-
       final QuerySnapshot<Map<String, dynamic>> invertersnapshot =
           await FirebaseFirestore.instance
               .collection('office_list/$officeId/inverter_list')
               .get();
       inverterList.addAll(invertersnapshot.docs
           .map((inverter) => inverter['InverterName'] as String));
-
-      querySnapshot.docs.forEach((doc) {
+      for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         if (data.containsKey('LoadValue')) {
           final loadtimestamp = int.parse(doc.id);
@@ -350,7 +430,7 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
                 {'value': loadValue, 'timestamp': timestamp, 'inv': invName});
           }
         }
-      });
+      }
     } else {
       final QuerySnapshot<Map<String, dynamic>> invertersnapshot =
           await FirebaseFirestore.instance
@@ -358,14 +438,12 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
               .get();
       inverterList.addAll(invertersnapshot.docs
           .map((inverter) => inverter['InverterName'] as String));
-
       int inverterCount = invertersnapshot.docs.length;
-
       for (int i = 1; i <= inverterCount; i++) {
         final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('office_list/$officeId/inverter_list/$i/load')
             .get();
-        querySnapshot.docs.forEach((doc) {
+        for (var doc in querySnapshot.docs) {
           final data = doc.data() as Map<String, dynamic>;
           if (data.containsKey('LoadValue')) {
             final loadtimestamp = int.parse(doc.id);
@@ -378,13 +456,13 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
                   {'value': loadValue, 'timestamp': timestamp, 'inv': invName});
             }
           }
-        });
+        }
       }
     }
   }
-
   return loadValues;
 }
+
 
 Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
     DateTime toDate, String officeId, String inverterId) async {
@@ -402,8 +480,7 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
               .get();
       inverterList.addAll(invertersnapshot.docs
           .map((inverter) => inverter['InverterName'] as String));
-
-      querySnapshot.docs.forEach((doc) {
+      for (var doc in querySnapshot.docs) {
         final data = doc.data() as Map<String, dynamic>;
         if (data.containsKey('UnitValue')) {
           final loadtimestamp = int.parse(doc.id);
@@ -417,7 +494,7 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
                 {'value': unitValue, 'timestamp': timestamp, 'inv': invName});
           }
         }
-      });
+      }
     } else {
       final QuerySnapshot<Map<String, dynamic>> invertersnapshot =
           await FirebaseFirestore.instance
@@ -425,13 +502,12 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
               .get();
       inverterList.addAll(invertersnapshot.docs
           .map((inverter) => inverter['InverterName'] as String));
-
       int inverterCount = invertersnapshot.docs.length;
       for (int i = 1; i <= inverterCount; i++) {
         final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
             .collection('office_list/$officeId/inverter_list/$i/unit')
             .get();
-        querySnapshot.docs.forEach((doc) {
+        for (var doc in querySnapshot.docs) {
           final data = doc.data() as Map<String, dynamic>;
           if (data.containsKey('UnitValue')) {
             final loadtimestamp = int.parse(doc.id);
@@ -444,9 +520,67 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
                   {'value': unitValue, 'timestamp': timestamp, 'inv': invName});
             }
           }
-        });
+        }
       }
     }
   }
   return unitValues;
+}
+
+Future<List<Map<String, dynamic>>> searchForEBReadings(
+    String officeId, DateTime fromDate, DateTime toDate) async {
+  final List<Map<String, dynamic>> ebReadings = [];
+
+  if (officeId != "0") {
+    final QuerySnapshot<Map<String, dynamic>> querySnapshot =
+        await FirebaseFirestore.instance
+            .collection('office_list/$officeId/EB_Readings')
+            .get();
+    for (var doc in querySnapshot.docs) {
+      final data = doc.data();
+      final ebtimestamp = int.parse(doc.id);
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(ebtimestamp * 1000);
+      if (timestamp.isAfter(fromDate) && timestamp.isBefore(toDate)) {
+        final ebValue = data['EBValue'] as num;
+        ebReadings.add({'value': ebValue, 'timestamp': timestamp});
+      }
+    }
+  }
+  return ebReadings;
+}
+
+
+Future<List<Map<String, dynamic>>> searchForCombinedValues(
+    DateTime fromDate,
+    DateTime toDate,
+    String officeId,
+    String inverterId,
+) async {
+  final List<Map<String, dynamic>> combinedValues = [];
+  final List<Map<String, dynamic>> loadValues =
+      await searchForLoadValues(fromDate, toDate, officeId, inverterId);
+  final List<Map<String, dynamic>> unitValues =
+      await searchForUnitValues(fromDate, toDate, officeId, inverterId);
+
+  for (var loadValue in loadValues) {
+    var combinedValue = {
+      'timestamp': loadValue['timestamp'],
+      'inv': loadValue['inv'],
+      'loadValue': loadValue['value'],
+      'unitValue': null,
+    };
+    var matchingUnitValue = unitValues.firstWhere(
+      (unitValue) =>
+          unitValue['timestamp'] == loadValue['timestamp'] &&
+          unitValue['inv'] == loadValue['inv'],
+      orElse: () =>{
+        'timestamp': loadValue['timestamp'],
+        'inv': loadValue['inv'],
+        'value': null,
+      }
+    );
+    combinedValue['unitValue'] = matchingUnitValue['value'];
+    combinedValues.add(combinedValue);
+  }
+  return combinedValues;
 }

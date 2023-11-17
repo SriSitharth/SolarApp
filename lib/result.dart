@@ -4,7 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 
 class Result extends StatefulWidget {
-  Result({Key? key}) : super(key: key);
+  const Result({Key? key}) : super(key: key);
   @override
   State<Result> createState() => _ResultState();
 }
@@ -14,6 +14,7 @@ class _ResultState extends State<Result> {
   DateTime toDate = DateTime.now();
   List<Map<String, dynamic>> loadValues = [];
   List<Map<String, dynamic>> unitValues = [];
+  List<Map<String, dynamic>> ebReadingsList = [];
   String selectedOffice = "0";
   String selectedInverter = "0";
   List<Map<String, dynamic>> selectedOfficeValues = [];
@@ -67,11 +68,14 @@ class _ResultState extends State<Result> {
           await searchForLoadValues(fromDate, toDate, officeId, inverterId);
       final List<Map<String, dynamic>> unitdata =
           await searchForUnitValues(fromDate, toDate, officeId, inverterId);
+      final List<Map<String, dynamic>> ebReadingsData = await searchForEBReadings(officeId, fromDate, toDate);
       setState(() {
         loadValues = listdata;
         unitValues = unitdata;
+        ebReadingsList = ebReadingsData;
       });
     } catch (e) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
         content: Text('Error fetching data : $e'),
         duration: const Duration(seconds: 5),
@@ -171,7 +175,6 @@ class _ResultState extends State<Result> {
                       setState(() {
                         selectedOffice = clientValue;
                         selectedOfficeValues.clear();
-                        print("office selected");
                         fetchFirestoreData(selectedOffice, selectedInverter);
                       });
                     },
@@ -212,7 +215,6 @@ class _ResultState extends State<Result> {
                       setState(() {
                         selectedInverter = clientValue;
                         selectedInverterValues.clear();
-                        print("Inverter selected");
                         fetchFirestoreData(selectedOffice, selectedInverter);
                       });
                     },
@@ -225,6 +227,59 @@ class _ResultState extends State<Result> {
                 }),
                 
                const Divider(
+              height: 0.3,
+            ),
+
+            const Padding(
+              padding: EdgeInsets.all(9.0),
+              child: Text(
+                'EB Value',
+                style: TextStyle(fontSize: 15),
+              ),
+            ),
+            //const SizedBox(height: 20),
+            SizedBox(
+              width: screenSize * 0.8,
+              height: 230,
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: true),
+                  titlesData: const FlTitlesData(
+                      show: true,
+                      topTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false))),
+                  borderData: FlBorderData(
+                      show: true,
+                      border: const Border(
+                          bottom: BorderSide(color: Colors.black, width: 2),
+                          left: BorderSide(color: Colors.black, width: 2))),
+                  minX: 0,
+                  maxX: ebReadingsList.length.toDouble()-1,
+                  minY: 0,
+                  maxY: ebReadingsList.isNotEmpty
+                      ? (ebReadingsList.reduce((a, b) =>
+                                  a['value'] > b['value'] ? a : b)['value'] +
+                              10.0)
+                          .toDouble()
+                      : 100.0,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: ebReadingsList.asMap().entries.map((entry) {
+                        //final timestamp = entry.value['timestamp'] as DateTime;
+                        final value = entry.value['value'] as num;
+                        return FlSpot(entry.key.toDouble(), value.toDouble());
+                      }).toList(),
+                      isCurved: true,
+                      color: Colors.orange,
+                      dotData: const FlDotData(show: true),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const Divider(
               height: 0.3,
             ),
             
@@ -254,7 +309,7 @@ class _ResultState extends State<Result> {
                           bottom: BorderSide(color: Colors.black, width: 2),
                           left: BorderSide(color: Colors.black, width: 2))),
                   minX: 0,
-                  maxX: loadValues.length.toDouble() - 1,
+                  maxX: loadValues.length.toDouble()-1,
                   minY: 0,
                   maxY: loadValues.isNotEmpty
                       ? (loadValues.reduce((a, b) =>
@@ -348,7 +403,7 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
   final QuerySnapshot querySnapshot =
       await FirebaseFirestore.instance.collection(firestorePath).get();
   final List<Map<String, dynamic>> loadValues = [];
-  querySnapshot.docs.forEach((doc) {
+  for (var doc in querySnapshot.docs) {
     final data = doc.data() as Map<String, dynamic>;
     if (data.containsKey('LoadValue')) {
       final loadtimestamp = int.parse(doc.id);
@@ -359,7 +414,7 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
         loadValues.add({'value': loadValue, 'timestamp': timestamp});
       }
     }
-  });
+  }
   return loadValues;
 }
 
@@ -375,7 +430,7 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
   final QuerySnapshot querySnapshot =
       await FirebaseFirestore.instance.collection(firestorePath).get();
   final List<Map<String, dynamic>> unitValues = [];
-  querySnapshot.docs.forEach((doc) {
+  for (var doc in querySnapshot.docs) {
     final data = doc.data() as Map<String, dynamic>;
     if (data.containsKey('UnitValue')) {
       final loadtimestamp = int.parse(doc.id);
@@ -386,6 +441,29 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
         unitValues.add({'value': unitValue, 'timestamp': timestamp});
       }
     }
-  });
+  }
   return unitValues;
+}
+
+Future<List<Map<String, dynamic>>> searchForEBReadings(
+    String officeId, DateTime fromDate, DateTime toDate) async {
+  final List<Map<String, dynamic>> ebReadings = [];
+
+  if (officeId != "0") {
+    final QuerySnapshot<Map<String, dynamic>> querySnapshot =
+        await FirebaseFirestore.instance
+            .collection('office_list/$officeId/EB_Readings')
+            .get();
+
+    for (var doc in querySnapshot.docs) {
+      final data = doc.data();
+      final ebtimestamp = int.parse(doc.id);
+      final timestamp = DateTime.fromMillisecondsSinceEpoch(ebtimestamp * 1000);
+      if (timestamp.isAfter(fromDate) && timestamp.isBefore(toDate)) {
+        final ebValue = data['EBValue'] as num;
+        ebReadings.add({'value': ebValue, 'timestamp': timestamp});
+      }
+    }
+  }
+  return ebReadings;
 }

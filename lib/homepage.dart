@@ -27,21 +27,6 @@ class _MyHomePageState extends State<MyHomePage> {
   String _uploadStatusText = "";
   Color _uploadStatusColor = Colors.black;
 
-  Future<List<String>> fetchOfficeNames() async {
-    CollectionReference office =
-        FirebaseFirestore.instance.collection('office_list');
-    QuerySnapshot snapshot = await office.get();
-    List<DocumentSnapshot> documents = snapshot.docs;
-    List<String> officeNames = [];
-    for (var element in documents) {
-      String officeName = element.get('OfficeName');
-      officeNames.add(officeName);
-      //Function Only for OfficeNameList and adding controller
-      officeNameList.add(officeName);
-    }
-    return officeNames;
-  }
-
   Future<void> _submitForm() async {
     if (selectedOffice != "0") {
       final String uniqueFileName =
@@ -57,6 +42,7 @@ class _MyHomePageState extends State<MyHomePage> {
         });
         return;
       }
+
       // Unit & Load Upload
       CollectionReference invRef = FirebaseFirestore.instance
           .collection('office_list/$selectedOffice/inverter_list');
@@ -68,9 +54,16 @@ class _MyHomePageState extends State<MyHomePage> {
         String unitInput = unitControllers[inverterName]!.text;
         String loadInput = loadControllers[inverterName]!.text;
         // Setting State for Unit & Load Input
-        if (unitInput.isEmpty && loadInput.isEmpty) {
+        if (unitInput.isEmpty) {
           setState(() {
-            _uploadStatusText = "Unit & Load Reading cannot be empty";
+            _uploadStatusText = "Unit Reading cannot be empty";
+            _uploadStatusColor = Colors.red;
+          });
+          return;
+        }
+        if (loadInput.isEmpty) {
+          setState(() {
+            _uploadStatusText = "Load Reading cannot be empty";
             _uploadStatusColor = Colors.red;
           });
           return;
@@ -78,10 +71,10 @@ class _MyHomePageState extends State<MyHomePage> {
 
         try {
           await invRef.doc(invDoc).collection('unit').doc(uniqueFileName).set({
-            'UnitValue': int.parse(unitInput),
+            'UnitValue': double.parse(unitInput),
           });
           await invRef.doc(invDoc).collection('load').doc(uniqueFileName).set({
-            'LoadValue': int.parse(loadInput),
+            'LoadValue': double.parse(loadInput),
           });
         } catch (e) {
           // ignore: use_build_context_synchronously
@@ -93,25 +86,27 @@ class _MyHomePageState extends State<MyHomePage> {
           );
           return;
         }
-        // EB Reading Upload
-        try {
-          await ebRef.doc(uniqueFileName).set({
-            'EBValue': int.parse(ebInput),
-          });
-          setState(() {
-            _uploadStatusText = "EB Reading added successfully";
-            EbController.clear();
-          });
-        } catch (e) {
-          // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error adding EB Reading : $e'),
-              duration: const Duration(seconds: 5),
-            ),
-          );
-          return;
-        }
+      }
+
+      // EB Reading Upload
+      try {
+        await ebRef.doc(uniqueFileName).set({
+          'EBValue': double.parse(ebInput),
+        });
+        setState(() {
+          _uploadStatusText = "Readings added successfully";
+          _uploadStatusColor = Colors.green;
+          EbController.clear();
+        });
+      } catch (e) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error adding EB Reading : $e'),
+            duration: const Duration(seconds: 5),
+          ),
+        );
+        return;
       }
     }
   }
@@ -126,7 +121,6 @@ class _MyHomePageState extends State<MyHomePage> {
   @override
   void initState() {
     super.initState();
-    fetchOfficeNames();
   }
 
   @override
@@ -166,8 +160,10 @@ class _MyHomePageState extends State<MyHomePage> {
               title: const Text('Add'),
               leading: const Icon(FontAwesomeIcons.userPlus),
               onTap: () {
-                Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => const Addproduct()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const Addproduct()));
               },
             ),
             const Divider(
@@ -178,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(FontAwesomeIcons.squarePollVertical),
               onTap: () {
                 Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => Result()));
+                    context, MaterialPageRoute(builder: (context) => const Result()));
               },
             ),
             const Divider(
@@ -230,7 +226,9 @@ class _MyHomePageState extends State<MyHomePage> {
                         child: Text('Select Office'),
                       ),
                     );
+                    officeNameList.clear();
                     for (var office in offices!) {
+                      officeNameList.add(office['OfficeName'] as String);
                       officeItems.add(DropdownMenuItem(
                           value: office.id, child: Text(office['OfficeName'])));
                     }
@@ -321,12 +319,12 @@ class _MyHomePageState extends State<MyHomePage> {
         Expanded(
           child: TextFormField(
             controller: EbController,
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
             decoration: const InputDecoration(
               border: OutlineInputBorder(),
               labelText: 'EB Reading',
             ),
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+           inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]')),LengthLimitingTextInputFormatter(6)],
           ),
         ),
       ],
@@ -368,12 +366,12 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     child: TextFormField(
                       controller: unitControllers[unitCont],
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Unit',
                       ),
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]')),LengthLimitingTextInputFormatter(6)],
                     ),
                   ),
                   const Padding(
@@ -384,12 +382,12 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     child: TextFormField(
                       controller: loadControllers[loadCont],
-                      keyboardType: TextInputType.number,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Load',
                       ),
-                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]')),LengthLimitingTextInputFormatter(6)],
                     ),
                   ),
                 ],

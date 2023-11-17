@@ -49,6 +49,7 @@ dependencies:
   permission_handler: ^11.0.0
   timezone: ^0.9.2
   intl: ^0.18.1
+  data_table_2: ^2.5.9
   
 dev_dependencies:
   flutter_test:
