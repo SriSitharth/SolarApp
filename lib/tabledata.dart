@@ -57,6 +57,10 @@ class _TabledataState extends State<Tabledata> {
     return DateFormat('dd-MM-yyyy').format(date);
   }
 
+  String formatTime(DateTime date) {
+    return DateFormat('HH:mm').format(date);
+  }
+
   String formatDateTime(DateTime dateTime) {
   return DateFormat('dd-MM-yyyy HH:mm').format(dateTime);
 }
@@ -121,9 +125,14 @@ class _TabledataState extends State<Tabledata> {
     double loadAvg = 0.0;
     double unitAvg = 0.0;
     double ebAvg = 0.0;
+    double diffAvg = 0.0;
+    double solarAvg = 0.0;
     int loadCount = 0;
     int unitCount = 0;
     int ebCount = 0;
+    int diffCount = 0;
+    int solarCount = 0;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Data Table")),
       body: SingleChildScrollView(
@@ -251,7 +260,7 @@ class _TabledataState extends State<Tabledata> {
 
             Center(
               child: Container(
-                padding: const EdgeInsets.only(top: 20.0),
+                padding: const EdgeInsets.only(top: 5.0),
                 child: DataTable(
                   columns: const [
                     DataColumn(label: Text('Date & Time')),
@@ -277,89 +286,92 @@ class _TabledataState extends State<Tabledata> {
             const Divider(
               height: 0.3,
             ),
-            Text('Average EB : ${ebCount > 0 ? (ebAvg / ebCount).toStringAsFixed(2) : "N/A"}',
-                style: const TextStyle(fontSize: 16)),
+            const SizedBox(height: 20),
+            Text('Average EB : ${ebCount > 0 ? (ebAvg / ebCount).toStringAsFixed(2) : "N/A"}   |   Total EB : ${ebCount > 0 ? ebAvg.toStringAsFixed(2) : "N/A"}',
+            ),
+            const SizedBox(height: 20),
             const Divider(
               height: 0.3,
             ),
 
-            // Center(
-            //   child: Container(
-            //     padding: const EdgeInsets.only(top: 20.0),
-            //     child: DataTable(
-            //       columns: const [
-            //         DataColumn(label: Text('Inverter')),
-            //         DataColumn(label: Text('Date & Time')),
-            //         DataColumn(label: Text('Load')),
-                    
-            //       ],
-                  
-            //       rows: loadList.map(
-            //         (load) {
-            //           loadAvg = loadAvg + load['value'];
-            //           loadCount = loadCount + 1;
-            //           return DataRow(
-            //             cells: [
-            //               DataCell(Text(load['inv'].toString())),
-            //               DataCell(
-            //                   Text(formatDateTime(load['timestamp']).toString())),
-            //               DataCell(Text(load['value'].toString())),
-            //             ],
-            //           );
-            //         },
-            //       ).toList(),
-            //     ),
-            //   ),
-            // ),
-            // const Divider(
-            //   height: 0.3,
-            // ),
-            // Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}',
-            //     style: const TextStyle(fontSize: 16)),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.only(top: 5.0),
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('From')),
+                    DataColumn(label: Text('To')),
+                    DataColumn(label: Text('Solar')),
+                  ],
+                  rows: calculateEBDifferences(ebReadingsList).map(
+                    (difference) {
+                      solarAvg = solarAvg + difference['difference'];
+                      solarCount = solarCount + 1;
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(formatDateTime(difference['currenttimestamp']).toString())),
+                          DataCell(Text(formatTime(difference['nexttimestamp']).toString())),
+                          DataCell(Text(difference['difference'].toString())),
+                        ],
+                      );
+                    },
+                  ).toList(),
+                ),
+              ),
+            ),
 
-            // const Divider(
-            //   height: 0.3,
-            // ),
+            const Divider(
+              height: 0.3,
+            ),
+            const SizedBox(height: 20),
+            Text('Solar Average : ${solarCount > 0 ? (solarAvg / solarCount).toStringAsFixed(2) : "N/A"}   |   Solar Total : ${solarCount > 0 ? solarAvg.toStringAsFixed(2) : "N/A"}',
+            ),
+            const SizedBox(height: 20),
+            const Divider(
+              height: 0.3,
+            ),
 
-            // Center(
-            //   child: Container(
-            //     padding: const EdgeInsets.only(top: 20.0),
-            //     child: DataTable(
-            //       columns: const [
-            //         DataColumn(label: Text('Inverter')),
-            //         DataColumn(label: Text('Date & Time')),
-            //         DataColumn(label: Text('Unit')),
-            //       ],
-            //       rows: unitList.map(
-            //         (unit) {
-            //           unitAvg = unitAvg + unit['value'];
-            //           unitCount = unitCount + 1;
-            //           return DataRow(
-            //             cells: [
-            //               DataCell(Text(unit['inv'].toString())),
-            //               DataCell(
-            //                   Text(formatDateTime(unit['timestamp']).toString())),
-            //               DataCell(Text(unit['value'].toString())),
-            //             ],
-            //           );
-            //         },
-            //       ).toList(),
-            //     ),
-            //   ),
-            // ),
-            // const Divider(
-            //   height: 0.3,
-            // ),
-            // Text('Average Unit : ${unitCount > 0 ? (unitAvg / unitCount).toStringAsFixed(2) : "N/A"}',
-            //     style: const TextStyle(fontSize: 16)),
-            // const Divider(
-            //   height: 0.3,
-            // ),
+             Center(
+              child: Container(
+                padding: const EdgeInsets.only(top: 5.0),
+                child: DataTable(
+                  columns: const [
+                    DataColumn(label: Text('From Date')),
+                    DataColumn(label: Text('To Date')),
+                    DataColumn(label: Text('EB')),
+                  ],
+                  rows: calculateDayDifferences(ebReadingsList).map(
+                    (daydifference) {
+                      diffAvg = diffAvg + daydifference['difference'];
+                      diffCount = diffCount + 1;
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(formatDate(daydifference['currenttimestamp']).toString())),
+                          DataCell(Text(formatDate(daydifference['nexttimestamp']).toString())),
+                          DataCell(Text(daydifference['difference'].toString())),
+                        ],
+                      );
+                    },
+                  ).toList(),
+                ),
+              ),
+            ),
+            const Divider(
+              height: 0.3,
+            ),
+            const SizedBox(height: 20),
+            Text('EB Average : ${diffCount > 0 ? (diffAvg / diffCount).toStringAsFixed(2) : "N/A"}   |   EB Total : ${diffCount > 0 ? diffAvg.toStringAsFixed(2) : "N/A"}',
+            ),
+            const SizedBox(height: 20),
+            const Divider(
+              height: 0.3,
+            ),
 
             Center(
               child: Container(
-                padding: const EdgeInsets.only(top: 20.0),
+                padding: const EdgeInsets.only(top: 5.0),
                 child: DataTable(
+                  columnSpacing: 25,
                   columns: const [
                     DataColumn(label: Text('Inverter')),
                     DataColumn(label: Text('Date/Time')),
@@ -389,8 +401,17 @@ class _TabledataState extends State<Tabledata> {
             const Divider(
               height: 0.3,
             ),
-            Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}   /  Average Unit : ${unitCount > 0 ? (unitAvg / unitCount).toStringAsFixed(2) : "N/A"}',
+            const SizedBox(height: 20),
+            Text('Average Unit : ${unitCount > 0 ? (unitAvg / unitCount).toStringAsFixed(2) : "N/A"}   |   Total Unit : ${loadCount > 0 ? unitAvg.toStringAsFixed(2) : "N/A"}',
             ),
+            const SizedBox(height: 20),
+            const Divider(
+              height: 0.3,
+            ),
+            const SizedBox(height: 20),
+             Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}   |   Total Load : ${loadCount > 0 ? loadAvg.toStringAsFixed(2) : "N/A"}',
+            ),
+            const SizedBox(height: 20),
             const Divider(
               height: 0.3,
             ),
@@ -549,7 +570,6 @@ Future<List<Map<String, dynamic>>> searchForEBReadings(
   return ebReadings;
 }
 
-
 Future<List<Map<String, dynamic>>> searchForCombinedValues(
     DateTime fromDate,
     DateTime toDate,
@@ -583,4 +603,48 @@ Future<List<Map<String, dynamic>>> searchForCombinedValues(
     combinedValues.add(combinedValue);
   }
   return combinedValues;
+}
+
+List<Map<String, dynamic>> calculateEBDifferences(List<Map<String, dynamic>> ebReadings) {
+  final List<Map<String, dynamic>> differences = [];
+  ebReadings.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
+
+  for (var i = 0; i < ebReadings.length - 1; i++) {
+    final currentReading = ebReadings[i];
+    final nextReading = ebReadings[i + 1];
+
+    final currentTimestamp  = currentReading['timestamp'];
+    final nextTimestamp = nextReading['timestamp'];
+
+    final currentDate = DateTime(currentTimestamp.year, currentTimestamp.month, currentTimestamp.day);
+    final nextDate = DateTime(nextTimestamp.year, nextTimestamp.month, nextTimestamp.day);
+
+    if (currentDate  == nextDate) {
+      final difference = nextReading['value'] - currentReading['value'];
+      differences.add({'currenttimestamp':currentTimestamp ,'nexttimestamp': nextTimestamp, 'difference': difference});
+    }
+  }
+  return differences;
+}
+
+List<Map<String, dynamic>> calculateDayDifferences(List<Map<String, dynamic>> ebReadings) {
+  final List<Map<String, dynamic>> daydifferences = [];
+  ebReadings.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
+
+  for (var i = 0; i < ebReadings.length - 1; i++) {
+    final currentReading = ebReadings[i];
+    final nextReading = ebReadings[i + 1];
+
+    final currentTimestamp  = currentReading['timestamp'];
+    final nextTimestamp = nextReading['timestamp'];
+
+    final currentDate = DateTime(currentTimestamp.year, currentTimestamp.month, currentTimestamp.day);
+    final nextDate = DateTime(nextTimestamp.year, nextTimestamp.month, nextTimestamp.day);
+
+    if (currentDate  != nextDate) {
+      final difference = nextReading['value'] - currentReading['value'];
+      daydifferences.add({'currenttimestamp':currentTimestamp ,'nexttimestamp': nextTimestamp, 'difference': difference});
+    }
+  }
+  return daydifferences;
 }

@@ -7,6 +7,7 @@ import 'package:inventory/addproduct.dart';
 import 'package:inventory/result.dart';
 import 'package:inventory/settings.dart';
 import 'package:inventory/tabledata.dart';
+import 'package:inventory/edit.dart';
 
 class MyHomePage extends StatefulWidget {
   const MyHomePage({Key? key}) : super(key: key);
@@ -24,8 +25,6 @@ class _MyHomePageState extends State<MyHomePage> {
   late TextEditingController EbController;
   Map<String, TextEditingController> unitControllers = {};
   Map<String, TextEditingController> loadControllers = {};
-  String _uploadStatusText = "";
-  Color _uploadStatusColor = Colors.black;
 
   Future<void> _submitForm() async {
     if (selectedOffice != "0") {
@@ -36,10 +35,12 @@ class _MyHomePageState extends State<MyHomePage> {
       String ebInput = EbController.text;
       // Setting State for EB Input
       if (ebInput.isEmpty) {
-        setState(() {
-          _uploadStatusText = "EB Reading cannot be empty";
-          _uploadStatusColor = Colors.red;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('EB Reading cannot be empty'),
+            duration: Duration(seconds: 5),
+          ),
+        );
         return;
       }
 
@@ -55,17 +56,23 @@ class _MyHomePageState extends State<MyHomePage> {
         String loadInput = loadControllers[inverterName]!.text;
         // Setting State for Unit & Load Input
         if (unitInput.isEmpty) {
-          setState(() {
-            _uploadStatusText = "Unit Reading cannot be empty";
-            _uploadStatusColor = Colors.red;
-          });
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unit Reading cannot be empty'),
+              duration: Duration(seconds: 5),
+            ),
+          );
           return;
         }
         if (loadInput.isEmpty) {
-          setState(() {
-            _uploadStatusText = "Load Reading cannot be empty";
-            _uploadStatusColor = Colors.red;
-          });
+          // ignore: use_build_context_synchronously
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Load Reading cannot be empty'),
+              duration: Duration(seconds: 5),
+            ),
+          );
           return;
         }
 
@@ -94,10 +101,16 @@ class _MyHomePageState extends State<MyHomePage> {
           'EBValue': double.parse(ebInput),
         });
         setState(() {
-          _uploadStatusText = "Readings added successfully";
-          _uploadStatusColor = Colors.green;
           EbController.clear();
         });
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Readings Added Successfully'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+        return;
       } catch (e) {
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
@@ -114,7 +127,6 @@ class _MyHomePageState extends State<MyHomePage> {
   void _resetForm() {
     setState(() {
       selectedOffice = "0";
-      _uploadStatusText = "";
     });
   }
 
@@ -170,11 +182,24 @@ class _MyHomePageState extends State<MyHomePage> {
               height: 0.3,
             ),
             ListTile(
+              title: const Text('Edit'),
+              leading: const Icon(FontAwesomeIcons.userPen),
+              onTap: () {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const Edit()));
+              },
+            ),
+            const Divider(
+              height: 0.3,
+            ),
+            ListTile(
               title: const Text('Visualizer'),
               leading: const Icon(FontAwesomeIcons.squarePollVertical),
               onTap: () {
-                Navigator.push(
-                    context, MaterialPageRoute(builder: (context) => const Result()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const Result()));
               },
             ),
             const Divider(
@@ -196,7 +221,7 @@ class _MyHomePageState extends State<MyHomePage> {
               leading: const Icon(FontAwesomeIcons.gear),
               onTap: () {
                 Navigator.push(context,
-                    MaterialPageRoute(builder: (context) => settings()));
+                    MaterialPageRoute(builder: (context) => const settings()));
               },
             ),
             const Divider(
@@ -260,14 +285,6 @@ class _MyHomePageState extends State<MyHomePage> {
                     ],
                   ),
                 ),
-              // Text Alert
-              Text(
-                _uploadStatusText,
-                style: TextStyle(
-                  color: _uploadStatusColor,
-                  fontSize: 16.0,
-                ),
-              ),
             ],
           ),
         ),
@@ -288,10 +305,12 @@ class _MyHomePageState extends State<MyHomePage> {
             if (selectedOffice != "0") {
               _submitForm();
             } else {
-              setState(() {
-                _uploadStatusText = "Select a Office";
-                _uploadStatusColor = Colors.red;
-              });
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Select an Office'),
+                  duration: Duration(seconds: 5),
+                ),
+              );
             }
           },
         ),
@@ -324,7 +343,10 @@ class _MyHomePageState extends State<MyHomePage> {
               border: OutlineInputBorder(),
               labelText: 'EB Reading',
             ),
-           inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]')),LengthLimitingTextInputFormatter(6)],
+            inputFormatters: [
+              FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+              LengthLimitingTextInputFormatter(6)
+            ],
           ),
         ),
       ],
@@ -366,12 +388,16 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     child: TextFormField(
                       controller: unitControllers[unitCont],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Unit',
                       ),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]')),LengthLimitingTextInputFormatter(6)],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+                        LengthLimitingTextInputFormatter(6)
+                      ],
                     ),
                   ),
                   const Padding(
@@ -382,12 +408,16 @@ class _MyHomePageState extends State<MyHomePage> {
                   Expanded(
                     child: TextFormField(
                       controller: loadControllers[loadCont],
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
                       decoration: const InputDecoration(
                         border: OutlineInputBorder(),
                         labelText: 'Load',
                       ),
-                      inputFormatters: [FilteringTextInputFormatter.allow(RegExp('[0-9.]')),LengthLimitingTextInputFormatter(6)],
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+                        LengthLimitingTextInputFormatter(6)
+                      ],
                     ),
                   ),
                 ],

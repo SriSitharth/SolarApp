@@ -17,9 +17,6 @@ class _ResultState extends State<Result> {
   List<Map<String, dynamic>> ebReadingsList = [];
   String selectedOffice = "0";
   String selectedInverter = "0";
-  List<Map<String, dynamic>> selectedOfficeValues = [];
-  List<Map<String, dynamic>> selectedInverterValues = [];
-
   Future<void> _selectFromDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -86,18 +83,6 @@ class _ResultState extends State<Result> {
   @override
   Widget build(BuildContext context) {
     final screenSize = MediaQuery.of(context).size.width;
-
-    // DateTime maxDate = DateTime.now();
-    // DateTime minDate = DateTime.now();
-
-    // if (unitValues.isNotEmpty) {
-    //   maxDate = unitValues.reduce((a, b) =>
-    //       a['timestamp'].compareTo(b['timestamp']) > 0 ? a : b)['timestamp'];
-    // }
-    // if (unitValues.isNotEmpty) {
-    //   minDate = unitValues.reduce((a, b) =>
-    //       a['timestamp'].compareTo(b['timestamp']) < 0 ? a : b)['timestamp'];
-    // }
 
     return Scaffold(
       appBar: AppBar(title: const Text("Visualizer")),
@@ -174,7 +159,6 @@ class _ResultState extends State<Result> {
                     onChanged: (clientValue) {
                       setState(() {
                         selectedOffice = clientValue;
-                        selectedOfficeValues.clear();
                         fetchFirestoreData(selectedOffice, selectedInverter);
                       });
                     },
@@ -214,7 +198,6 @@ class _ResultState extends State<Result> {
                     onChanged: (clientValue) {
                       setState(() {
                         selectedInverter = clientValue;
-                        selectedInverterValues.clear();
                         fetchFirestoreData(selectedOffice, selectedInverter);
                       });
                     },
