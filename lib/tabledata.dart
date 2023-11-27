@@ -16,6 +16,7 @@ class _TabledataState extends State<Tabledata> {
   Map<String, List<String>> invertersByOffice = {};
   List<Map<String, dynamic>> loadList = [];
   List<Map<String, dynamic>> unitList = [];
+  List<Map<String, dynamic>> eTodayList = [];
   List<Map<String, dynamic>> ebReadingsList = [];
   List<Map<String, dynamic>> combinedValues = [];
   String selectedOffice = "0";
@@ -85,7 +86,6 @@ class _TabledataState extends State<Tabledata> {
           .toList();
       invertersByOffice[officeList[i]] = inverterList;
     }
-    setState(() {});
   }
 
   Future<void> fetchFirestoreData(String officeId, String inverterId) async {
@@ -98,11 +98,14 @@ class _TabledataState extends State<Tabledata> {
           await searchForEBReadings(officeId, fromDate, toDate);
       final List<Map<String, dynamic>> combinedData =
           await searchForCombinedValues(fromDate, toDate, officeId, inverterId);
+      final List<Map<String, dynamic>> eTodayData =
+          await searchForeTodayValues(fromDate, toDate, officeId, inverterId);
       setState(() {
         loadList = loaddata;
         unitList = unitdata;
         ebReadingsList = ebReadingsData;
         combinedValues = combinedData;
+        eTodayList = eTodayData;
       });
     } catch (e) {
       // ignore: use_build_context_synchronously
@@ -124,11 +127,13 @@ class _TabledataState extends State<Tabledata> {
   Widget build(BuildContext context) {
     double loadAvg = 0.0;
     double unitAvg = 0.0;
+    double etodayAvg = 0.0;
     double ebAvg = 0.0;
     double diffAvg = 0.0;
     double solarAvg = 0.0;
     int loadCount = 0;
     int unitCount = 0;
+    int etodayCount = 0;
     int ebCount = 0;
     int diffCount = 0;
     int solarCount = 0;
@@ -195,9 +200,11 @@ class _TabledataState extends State<Tabledata> {
                       ),
                     );
                     for (var companyName in company!) {
+                      if(companyName['isOfficeDeleted'] == false){
                       officeName.add(DropdownMenuItem(
                           value: companyName.id,
                           child: Text(companyName['OfficeName'])));
+                      }
                     }
                   }
                   return DropdownButtonFormField(
@@ -209,8 +216,6 @@ class _TabledataState extends State<Tabledata> {
                       });
                     },
                     value: selectedOffice,
-                    validator: (value) =>
-                        value == "0" ? 'field required' : null,
                     isExpanded: true,
                     padding: const EdgeInsets.all(14.0),
                   );
@@ -234,9 +239,11 @@ class _TabledataState extends State<Tabledata> {
                       ),
                     );
                     for (var companyName in company!) {
+                      if(companyName['isInverterDeleted']==false){
                       inverterName.add(DropdownMenuItem(
                           value: companyName.id,
                           child: Text(companyName['InverterName'])));
+                      }
                     }
                   }
                   return DropdownButtonFormField(
@@ -248,8 +255,6 @@ class _TabledataState extends State<Tabledata> {
                       });
                     },
                     value: selectedInverter,
-                    validator: (value) =>
-                        value == "0" ? 'field required' : null,
                     isExpanded: true,
                     padding: const EdgeInsets.all(14.0),
                   );
@@ -257,7 +262,13 @@ class _TabledataState extends State<Tabledata> {
             const Divider(
               height: 0.3,
             ),
-
+               Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('All EB Readings',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
+              ),
             Center(
               child: Container(
                 padding: const EdgeInsets.only(top: 5.0),
@@ -293,6 +304,14 @@ class _TabledataState extends State<Tabledata> {
             const Divider(
               height: 0.3,
             ),
+
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('Solar Readings (Morning - Evening)',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
+              ),
 
             Center(
               child: Container(
@@ -331,6 +350,14 @@ class _TabledataState extends State<Tabledata> {
               height: 0.3,
             ),
 
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('EB Reading (Evening - Morning)',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
+              ),
+
              Center(
               child: Container(
                 padding: const EdgeInsets.only(top: 5.0),
@@ -366,6 +393,14 @@ class _TabledataState extends State<Tabledata> {
             const Divider(
               height: 0.3,
             ),
+
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('Inverter Readings (Load | Unit)',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
+              ),
 
             Center(
               child: Container(
@@ -410,6 +445,52 @@ class _TabledataState extends State<Tabledata> {
             ),
             const SizedBox(height: 20),
              Text('Average Load : ${loadCount > 0 ? (loadAvg / loadCount).toStringAsFixed(2) : "N/A"}   |   Total Load : ${loadCount > 0 ? loadAvg.toStringAsFixed(2) : "N/A"}',
+            ),
+            const SizedBox(height: 20),
+            const Divider(
+              height: 0.3,
+            ),
+
+
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('Inverter Readings (E-Today)',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
+              ),
+            Center(
+              child: Container(
+                padding: const EdgeInsets.only(top: 5.0),
+                child: DataTable(
+                  columnSpacing: 25,
+                  columns: const [
+                    DataColumn(label: Text('Inverter')),
+                    DataColumn(label: Text('Date/Time')),
+                    DataColumn(label: Text('E-Today')),
+                  ],
+                  rows: eTodayList.map(
+                    (etoday) {
+                      etodayAvg = etodayAvg + etoday['value'];
+                      etodayCount = etodayCount + 1;
+                      return DataRow(
+                        cells: [
+                          DataCell(Text(etoday['inv'].toString())),
+                          DataCell(
+                              Text(formatDateTime(etoday['timestamp']).toString())),
+                          DataCell(Text(etoday['value'].toString())),
+                        ],
+                      );
+                    },
+                  ).toList(),
+                ),
+              ),
+            ),
+            const Divider(
+              height: 0.3,
+            ),
+            const SizedBox(height: 20),
+            Text('E-Today Average : ${etodayCount > 0 ? (etodayAvg / etodayCount).toStringAsFixed(2) : "N/A"}   |   E-Today Total : ${etodayCount > 0 ? etodayAvg.toStringAsFixed(2) : "N/A"}',
             ),
             const SizedBox(height: 20),
             const Divider(
@@ -484,7 +565,6 @@ Future<List<Map<String, dynamic>>> searchForLoadValues(DateTime fromDate,
   return loadValues;
 }
 
-
 Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
     DateTime toDate, String officeId, String inverterId) async {
   final List<Map<String, dynamic>> unitValues = [];
@@ -546,6 +626,69 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
     }
   }
   return unitValues;
+}
+
+Future<List<Map<String, dynamic>>> searchForeTodayValues(DateTime fromDate,
+    DateTime toDate, String officeId, String inverterId) async {
+  final List<Map<String, dynamic>> eTodayValues = [];
+  final List<String> inverterList = [];
+
+  if (officeId != "0") {
+    if (inverterId != "0") {
+      final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+          .collection('office_list/$officeId/inverter_list/$inverterId/eToday')
+          .get();
+      final QuerySnapshot<Map<String, dynamic>> invertersnapshot =
+          await FirebaseFirestore.instance
+              .collection('office_list/$officeId/inverter_list')
+              .get();
+      inverterList.addAll(invertersnapshot.docs
+          .map((inverter) => inverter['InverterName'] as String));
+      for (var doc in querySnapshot.docs) {
+        final data = doc.data() as Map<String, dynamic>;
+        if (data.containsKey('eTodayValue')) {
+          final etodaytimestamp = int.parse(doc.id);
+          final timestamp =
+              DateTime.fromMillisecondsSinceEpoch(etodaytimestamp * 1000);
+          if (timestamp.isAfter(fromDate) && timestamp.isBefore(toDate)) {
+            final etodayValue = data['eTodayValue'] as num;
+            int reqId = int.parse(inverterId);
+            final invName = inverterList[reqId - 1];
+            eTodayValues.add(
+                {'value': etodayValue, 'timestamp': timestamp, 'inv': invName});
+          }
+        }
+      }
+    } else {
+      final QuerySnapshot<Map<String, dynamic>> invertersnapshot =
+          await FirebaseFirestore.instance
+              .collection('office_list/$officeId/inverter_list')
+              .get();
+      inverterList.addAll(invertersnapshot.docs
+          .map((inverter) => inverter['InverterName'] as String));
+      int inverterCount = invertersnapshot.docs.length;
+      for (int i = 1; i <= inverterCount; i++) {
+        final QuerySnapshot querySnapshot = await FirebaseFirestore.instance
+            .collection('office_list/$officeId/inverter_list/$i/eToday')
+            .get();
+        for (var doc in querySnapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          if (data.containsKey('eTodayValue')) {
+            final etodaytimestamp = int.parse(doc.id);
+            final timestamp =
+                DateTime.fromMillisecondsSinceEpoch(etodaytimestamp * 1000);
+            if (timestamp.isAfter(fromDate) && timestamp.isBefore(toDate)) {
+              final etodayValue = data['eTodayValue'] as num;
+              final invName = inverterList[i - 1];
+              eTodayValues.add(
+                  {'value': etodayValue, 'timestamp': timestamp, 'inv': invName});
+            }
+          }
+        }
+      }
+    }
+  }
+  return eTodayValues;
 }
 
 Future<List<Map<String, dynamic>>> searchForEBReadings(

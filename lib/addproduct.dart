@@ -47,14 +47,15 @@ class _AddproductState extends State<Addproduct> {
           await collRef.where('OfficeName', isEqualTo: inputOfficeName).get();
       if (querySnapshot.docs.isNotEmpty) {
         setState(() {
-        showOfficeNameDuplicate = true;
-      });
-       return;
+          showOfficeNameDuplicate = true;
+        });
+        return;
       }
       QuerySnapshot docCountSnapshot = await collRef.get();
       int docCount = docCountSnapshot.docs.length;
       await collRef.doc((docCount + 1).toString()).set({
         'OfficeName': inputOfficeName,
+        'isOfficeDeleted': false,
       });
       // show the success message
       setState(() {
@@ -72,7 +73,7 @@ class _AddproductState extends State<Addproduct> {
   // Function to Add Inverter
   void _addInverter() async {
     // Not selected the office
-    if(selectedOffice == "0"){
+    if (selectedOffice == "0") {
       setState(() {
         showInverterNameFailure = true;
         _textField2.clear();
@@ -80,7 +81,7 @@ class _AddproductState extends State<Addproduct> {
       return;
     }
     String inputInverterName = _textField2.text.trim();
-     if (inputInverterName.isEmpty) {
+    if (inputInverterName.isEmpty) {
       setState(() {
         showInverterNameError = true;
         showInverterNameSuccess = false;
@@ -89,7 +90,7 @@ class _AddproductState extends State<Addproduct> {
       });
       return;
     }
-    
+
     // Reset the error state
     setState(() {
       showInverterNameError = false;
@@ -101,26 +102,28 @@ class _AddproductState extends State<Addproduct> {
         .collection('office_list/$selectedOffice/inverter_list');
     try {
       // Check if the inverter name already exists
-      QuerySnapshot querySnapshot =
-          await invRef.where('InverterName', isEqualTo: inputInverterName).get();
+      QuerySnapshot querySnapshot = await invRef
+          .where('InverterName', isEqualTo: inputInverterName)
+          .get();
       if (querySnapshot.docs.isNotEmpty) {
         setState(() {
-        showInverterNameDuplicate = true;
-      });
-       return;
+          showInverterNameDuplicate = true;
+        });
+        return;
       }
       QuerySnapshot invCountSnapshot = await invRef.get();
       int invCount = invCountSnapshot.docs.length;
       await invRef.doc((invCount + 1).toString()).set({
         'InverterName': inputInverterName,
+        'isInverterDeleted': false,
       });
-       // show the success message
+      // show the success message
       setState(() {
         showInverterNameSuccess = true;
         _textField2.clear();
       });
     } catch (e) {
-       setState(() {
+      setState(() {
         showInverterNameFailure = true;
         _textField2.clear();
       });
@@ -139,8 +142,16 @@ class _AddproductState extends State<Addproduct> {
                 controller: _textField1,
                 decoration: InputDecoration(
                   labelText: 'Office Name',
-                  errorText: showOfficeNameError ? 'Office name cannot be empty' : showOfficeNameFailure ? 'Error Adding Office Name' : null,
-                  helperText: showOfficeNameSuccess ? 'Office added successfully' : showOfficeNameDuplicate ? 'Office name already exists' : null,
+                  errorText: showOfficeNameError
+                      ? 'Office name cannot be empty'
+                      : showOfficeNameFailure
+                          ? 'Error Adding Office Name'
+                          : null,
+                  helperText: showOfficeNameSuccess
+                      ? 'Office added successfully'
+                      : showOfficeNameDuplicate
+                          ? 'Office name already exists'
+                          : null,
                 ),
               ),
             ),
@@ -168,9 +179,11 @@ class _AddproductState extends State<Addproduct> {
                       ),
                     );
                     for (var companyName in company!) {
-                      officeName.add(DropdownMenuItem(
-                          value: companyName.id,
-                          child: Text(companyName['OfficeName'])));
+                      if (companyName['isOfficeDeleted'] == false) {
+                        officeName.add(DropdownMenuItem(
+                            value: companyName.id,
+                            child: Text(companyName['OfficeName'])));
+                      }
                     }
                   }
                   return DropdownButton(
@@ -190,10 +203,19 @@ class _AddproductState extends State<Addproduct> {
               padding: const EdgeInsets.all(16.0),
               child: TextField(
                 controller: _textField2,
-                decoration: InputDecoration(labelText: 'Inverter Name',
-                errorText: showInverterNameError ? 'Inverter name cannot be empty' : showInverterNameFailure ? 'Error Adding Inverter Name' : null,
-                helperText: showInverterNameSuccess ? 'Inverter added successfully' : showInverterNameDuplicate ? 'Inverter name already exists' : null,
-                  ),
+                decoration: InputDecoration(
+                  labelText: 'Inverter Name',
+                  errorText: showInverterNameError
+                      ? 'Inverter name cannot be empty'
+                      : showInverterNameFailure
+                          ? 'Error Adding Inverter Name'
+                          : null,
+                  helperText: showInverterNameSuccess
+                      ? 'Inverter added successfully'
+                      : showInverterNameDuplicate
+                          ? 'Inverter name already exists'
+                          : null,
+                ),
               ),
             ),
 

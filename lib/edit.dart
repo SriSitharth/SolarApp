@@ -59,26 +59,30 @@ class _EditState extends State<Edit> {
                   officeNameList.clear();
                   for (var office in offices!) {
                     officeNameList.add(office['OfficeName'] as String);
-                    officeItems.add(DropdownMenuItem(
-                        value: office.id, child: Text(office['OfficeName'])));
+                    if (office['isOfficeDeleted'] == false) {
+                      officeItems.add(DropdownMenuItem(
+                          value: office.id, child: Text(office['OfficeName'])));
+                    }
                   }
                   return DropdownButton(
                     items: officeItems,
                     onChanged: (clientValue) {
                       setState(() {
                         selectedOffice = clientValue;
-                        _officeNameController.text = selectedOffice == "0" ? "" : officeNameList[int.parse(selectedOffice)-1];
-                            
+                        _officeNameController.text = selectedOffice == "0"
+                            ? ""
+                            : officeNameList[int.parse(selectedOffice) - 1];
                       });
                     },
-                    value: officeNameList.contains(_officeNameController.text)? selectedOffice: "0",
+                    value: officeNameList.contains(_officeNameController.text)
+                        ? selectedOffice
+                        : "0",
                     isExpanded: true,
                     padding: const EdgeInsets.all(16.0),
                   );
                 }
               },
             ),
-
             // Office Textbox
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -90,7 +94,7 @@ class _EditState extends State<Edit> {
                 ),
               ),
             ),
-
+            // Office Related Buttons
             Row(
               children: [
                 const Spacer(),
@@ -100,13 +104,38 @@ class _EditState extends State<Edit> {
                 ),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: deleteOffice,
+                  onPressed: () async {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Are you sure?'),
+                        content: const Text(
+                            'This action will permanently delete this data'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (result == null || !result) {
+                      return;
+                    }
+                    deleteOffice();
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(Colors.red),
+                  ),
                   child: const Text('Delete Office'),
                 ),
                 const Spacer(),
               ],
             ),
-
             // Inverter Dropdown
             StreamBuilder<QuerySnapshot>(
                 stream: FirebaseFirestore.instance
@@ -127,27 +156,30 @@ class _EditState extends State<Edit> {
                     inverterNameList.clear();
                     for (var inv in inverters!) {
                       inverterNameList.add(inv['InverterName'] as String);
-                      inverterName.add(DropdownMenuItem(
-                          value: inv.id,
-                          child: Text(inv['InverterName'])));
+                      if (inv['isInverterDeleted'] == false) {
+                        inverterName.add(DropdownMenuItem(
+                            value: inv.id, child: Text(inv['InverterName'])));
+                      }
                     }
                   }
-                  return DropdownButtonFormField(
+                  return DropdownButton(
                     items: inverterName,
                     onChanged: (clientValue) {
                       setState(() {
                         selectedInverter = clientValue;
-                        _inverterNameController.text = selectedInverter == "0" ? "" : inverterNameList[int.parse(selectedInverter)-1];
+                        _inverterNameController.text = selectedInverter == "0"
+                            ? ""
+                            : inverterNameList[int.parse(selectedInverter) - 1];
                       });
                     },
-                    value: inverterNameList.contains(_inverterNameController.text)? selectedInverter: "0",
-                    validator: (value) =>
-                        value == "0" ? 'field required' : null,
+                    value:
+                        inverterNameList.contains(_inverterNameController.text)
+                            ? selectedInverter
+                            : "0",
                     isExpanded: true,
                     padding: const EdgeInsets.all(16.0),
                   );
                 }),
-
             // Inverter Textbox
             Padding(
               padding: const EdgeInsets.all(16.0),
@@ -159,7 +191,7 @@ class _EditState extends State<Edit> {
                 ),
               ),
             ),
-
+            // Inverter Related Buttons
             Row(
               children: [
                 const Spacer(),
@@ -169,7 +201,33 @@ class _EditState extends State<Edit> {
                 ),
                 const Spacer(),
                 ElevatedButton(
-                  onPressed: deleteInverter,
+                  onPressed: () async {
+                    final result = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Are you sure?'),
+                        content: const Text(
+                            'This action will permanently delete this data'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Delete'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (result == null || !result) {
+                      return;
+                    }
+                    deleteInverter();
+                  },
+                  style: ButtonStyle(
+                    backgroundColor: MaterialStateProperty.all(Colors.red),
+                  ),
                   child: const Text('Delete Inverter'),
                 ),
                 const Spacer(),
@@ -187,7 +245,6 @@ class _EditState extends State<Edit> {
       try {
         CollectionReference inverterCollection =
             FirebaseFirestore.instance.collection('office_list');
-
         await inverterCollection
             .doc(selectedOffice)
             .collection('inverter_list')
@@ -195,12 +252,12 @@ class _EditState extends State<Edit> {
             .update({
           'InverterName': editedInverterData,
         });
-
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Inverter name updated successfully!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.green,
           ),
         );
       } catch (e) {
@@ -209,6 +266,7 @@ class _EditState extends State<Edit> {
           const SnackBar(
             content: Text('Failed to update inverter name!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -218,20 +276,27 @@ class _EditState extends State<Edit> {
   Future<void> deleteInverter() async {
     if (selectedOffice != "0" && selectedInverter != "0") {
       try {
+        String tempSelectedInverter = selectedInverter;
+        setState(() {
+          _inverterNameController.clear();
+          selectedInverter = "0";
+        });
         CollectionReference inverterCollection =
             FirebaseFirestore.instance.collection('office_list');
         await inverterCollection
             .doc(selectedOffice)
             .collection('inverter_list')
-            .doc(selectedInverter)
-            .delete();
-        // ignore: use_build_context_synchronously
-        Navigator.pop(context);
+            .doc(tempSelectedInverter)
+            .update({
+          'isInverterDeleted': true,
+        });
+
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Inverter name deleted successfully!'),
+            content: Text('Inverter deleted successfully!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.green,
           ),
         );
       } catch (e) {
@@ -240,6 +305,7 @@ class _EditState extends State<Edit> {
           const SnackBar(
             content: Text('Failed to delete inverter!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -260,6 +326,7 @@ class _EditState extends State<Edit> {
           const SnackBar(
             content: Text('Office name updated successfully!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.green,
           ),
         );
       } catch (e) {
@@ -268,6 +335,7 @@ class _EditState extends State<Edit> {
           const SnackBar(
             content: Text('Failed to update office name!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
       }
@@ -277,16 +345,22 @@ class _EditState extends State<Edit> {
   Future<void> deleteOffice() async {
     if (selectedOffice != "0") {
       try {
+        String tempSelectedOffice = selectedOffice;
+        setState(() {
+          _officeNameController.clear();
+          selectedOffice = "0";
+        });
         CollectionReference officeCollection =
             FirebaseFirestore.instance.collection('office_list');
-        await officeCollection.doc(selectedOffice).delete();
-        // ignore: use_build_context_synchronously
-        Navigator.pop(context);
+        await officeCollection.doc(tempSelectedOffice).update({
+          'isOfficeDeleted': true,
+        });
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Office deleted successfully!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.green,
           ),
         );
       } catch (e) {
@@ -295,6 +369,7 @@ class _EditState extends State<Edit> {
           const SnackBar(
             content: Text('Failed to delete office!'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
       }

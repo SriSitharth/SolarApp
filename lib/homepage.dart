@@ -25,6 +25,7 @@ class _MyHomePageState extends State<MyHomePage> {
   late TextEditingController EbController;
   Map<String, TextEditingController> unitControllers = {};
   Map<String, TextEditingController> loadControllers = {};
+  Map<String, TextEditingController> etodayControllers = {};
 
   Future<void> _submitForm() async {
     if (selectedOffice != "0") {
@@ -33,49 +34,19 @@ class _MyHomePageState extends State<MyHomePage> {
       CollectionReference ebRef = FirebaseFirestore.instance
           .collection('office_list/$selectedOffice/EB_Readings');
       String ebInput = EbController.text;
-      // Setting State for EB Input
-      if (ebInput.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('EB Reading cannot be empty'),
-            duration: Duration(seconds: 5),
-          ),
-        );
-        return;
-      }
 
       // Unit & Load Upload
       CollectionReference invRef = FirebaseFirestore.instance
           .collection('office_list/$selectedOffice/inverter_list');
-      QuerySnapshot invSnapshot = await invRef.get();
+      QuerySnapshot invSnapshot = await invRef.where('isInverterDeleted', isEqualTo: false).get();
       List<DocumentSnapshot> documents = invSnapshot.docs;
+
       for (var element in documents) {
         String invDoc = element.id;
         String inverterName = element.get('InverterName');
         String unitInput = unitControllers[inverterName]!.text;
         String loadInput = loadControllers[inverterName]!.text;
-        // Setting State for Unit & Load Input
-        if (unitInput.isEmpty) {
-          // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Unit Reading cannot be empty'),
-              duration: Duration(seconds: 5),
-            ),
-          );
-          return;
-        }
-        if (loadInput.isEmpty) {
-          // ignore: use_build_context_synchronously
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Load Reading cannot be empty'),
-              duration: Duration(seconds: 5),
-            ),
-          );
-          return;
-        }
-
+        String etodayInput = etodayControllers[inverterName]!.text;
         try {
           await invRef.doc(invDoc).collection('unit').doc(uniqueFileName).set({
             'UnitValue': double.parse(unitInput),
@@ -83,12 +54,20 @@ class _MyHomePageState extends State<MyHomePage> {
           await invRef.doc(invDoc).collection('load').doc(uniqueFileName).set({
             'LoadValue': double.parse(loadInput),
           });
+          await invRef
+              .doc(invDoc)
+              .collection('eToday')
+              .doc(uniqueFileName)
+              .set({
+            'eTodayValue': double.parse(etodayInput),
+          });
         } catch (e) {
           // ignore: use_build_context_synchronously
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Error adding Unit/Load Reading : $e'),
+              content: Text('Error adding Unit/Load/E-Today Reading : $e'),
               duration: const Duration(seconds: 5),
+              backgroundColor: Colors.red,
             ),
           );
           return;
@@ -108,6 +87,7 @@ class _MyHomePageState extends State<MyHomePage> {
           const SnackBar(
             content: Text('Readings Added Successfully'),
             duration: Duration(seconds: 5),
+            backgroundColor: Colors.green,
           ),
         );
         return;
@@ -117,6 +97,7 @@ class _MyHomePageState extends State<MyHomePage> {
           SnackBar(
             content: Text('Error adding EB Reading : $e'),
             duration: const Duration(seconds: 5),
+            backgroundColor: Colors.red,
           ),
         );
         return;
@@ -185,10 +166,8 @@ class _MyHomePageState extends State<MyHomePage> {
               title: const Text('Edit'),
               leading: const Icon(FontAwesomeIcons.userPen),
               onTap: () {
-                Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                        builder: (context) => const Edit()));
+                Navigator.push(context,
+                    MaterialPageRoute(builder: (context) => const Edit()));
               },
             ),
             const Divider(
@@ -254,8 +233,11 @@ class _MyHomePageState extends State<MyHomePage> {
                     officeNameList.clear();
                     for (var office in offices!) {
                       officeNameList.add(office['OfficeName'] as String);
-                      officeItems.add(DropdownMenuItem(
-                          value: office.id, child: Text(office['OfficeName'])));
+                      if (office['isOfficeDeleted'] == false) {
+                        officeItems.add(DropdownMenuItem(
+                            value: office.id,
+                            child: Text(office['OfficeName'])));
+                      }
                     }
                     return DropdownButton(
                       items: officeItems,
@@ -279,7 +261,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     children: <Widget>[
                       buildOfficeRow(selectedOffice),
                       const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 10),
+                        padding: EdgeInsets.symmetric(vertical: 8),
                       ),
                       buildInvertersList(selectedOffice),
                     ],
@@ -302,15 +284,8 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
           ),
           onPressed: () async {
-            if (selectedOffice != "0") {
+            if (_formKey.currentState!.validate()) {
               _submitForm();
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Select an Office'),
-                  duration: Duration(seconds: 5),
-                ),
-              );
             }
           },
         ),
@@ -347,6 +322,12 @@ class _MyHomePageState extends State<MyHomePage> {
               FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
               LengthLimitingTextInputFormatter(6)
             ],
+            validator: (value) {
+              if (value == null || value.isEmpty) {
+                return '* All Readings are required';
+              }
+              return null;
+            },
           ),
         ),
       ],
@@ -359,6 +340,7 @@ class _MyHomePageState extends State<MyHomePage> {
           .collection('office_list')
           .doc(selectedOffice)
           .collection('inverter_list')
+          .where('isInverterDeleted', isEqualTo: false)
           .snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
@@ -372,8 +354,10 @@ class _MyHomePageState extends State<MyHomePage> {
             itemBuilder: (context, inverterIndex) {
               String unitCont = inverterNames[inverterIndex];
               String loadCont = inverterNames[inverterIndex];
+              String etodayCont = inverterNames[inverterIndex];
               unitControllers[unitCont] = TextEditingController();
               loadControllers[loadCont] = TextEditingController();
+              etodayControllers[etodayCont] = TextEditingController();
               return Row(
                 children: [
                   Text(
@@ -381,28 +365,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     style: const TextStyle(fontSize: 16),
                   ),
                   const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 35, vertical: 30),
+                    padding: EdgeInsets.symmetric(horizontal: 15, vertical: 30),
                   ),
-
-                  // Unit Textbox
-                  Expanded(
-                    child: TextFormField(
-                      controller: unitControllers[unitCont],
-                      keyboardType:
-                          const TextInputType.numberWithOptions(decimal: true),
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        labelText: 'Unit',
-                      ),
-                      inputFormatters: [
-                        FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
-                        LengthLimitingTextInputFormatter(6)
-                      ],
-                    ),
-                  ),
-                  const Padding(
-                      padding:
-                          EdgeInsets.symmetric(horizontal: 15, vertical: 45)),
 
                   // Load Textbox
                   Expanded(
@@ -418,6 +382,66 @@ class _MyHomePageState extends State<MyHomePage> {
                         FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
                         LengthLimitingTextInputFormatter(6)
                       ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '* Required Field';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 5, vertical: 45)),
+
+                  // E-Today Textbox
+                  Expanded(
+                    child: TextFormField(
+                      controller: etodayControllers[etodayCont],
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'E-Today',
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+                        LengthLimitingTextInputFormatter(6)
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '* Required Field';
+                        }
+                        return null;
+                      },
+                    ),
+                  ),
+
+                  const Padding(
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 5, vertical: 45)),
+
+                  // Unit Textbox
+                  Expanded(
+                    child: TextFormField(
+                      controller: unitControllers[unitCont],
+                      keyboardType:
+                          const TextInputType.numberWithOptions(decimal: true),
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        labelText: 'Unit',
+                      ),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
+                        LengthLimitingTextInputFormatter(6)
+                      ],
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return '* Required Field';
+                        }
+                        return null;
+                      },
                     ),
                   ),
                 ],

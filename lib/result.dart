@@ -14,9 +14,11 @@ class _ResultState extends State<Result> {
   DateTime toDate = DateTime.now();
   List<Map<String, dynamic>> loadValues = [];
   List<Map<String, dynamic>> unitValues = [];
+  List<Map<String, dynamic>> eTodayValues = [];
   List<Map<String, dynamic>> ebReadingsList = [];
   String selectedOffice = "0";
   String selectedInverter = "0";
+
   Future<void> _selectFromDate(BuildContext context) async {
     final DateTime? picked = await showDatePicker(
       context: context,
@@ -61,14 +63,14 @@ class _ResultState extends State<Result> {
 
   Future<void> fetchFirestoreData(String officeId, String inverterId) async {
     try {
-      final List<Map<String, dynamic>> listdata =
-          await searchForLoadValues(fromDate, toDate, officeId, inverterId);
-      final List<Map<String, dynamic>> unitdata =
-          await searchForUnitValues(fromDate, toDate, officeId, inverterId);
+      final List<Map<String, dynamic>> listdata = await searchForLoadValues(fromDate, toDate, officeId, inverterId);
+      final List<Map<String, dynamic>> unitdata = await searchForUnitValues(fromDate, toDate, officeId, inverterId);
+      final List<Map<String, dynamic>> eTodaydata = await searchForeTodayValues(fromDate, toDate, officeId, inverterId);
       final List<Map<String, dynamic>> ebReadingsData = await searchForEBReadings(officeId, fromDate, toDate);
       setState(() {
         loadValues = listdata;
         unitValues = unitdata;
+        eTodayValues = eTodaydata;
         ebReadingsList = ebReadingsData;
       });
     } catch (e) {
@@ -149,9 +151,11 @@ class _ResultState extends State<Result> {
                       ),
                     );
                     for (var companyName in company!) {
+                      if(companyName['isOfficeDeleted'] == false){
                       officeName.add(DropdownMenuItem(
                           value: companyName.id,
                           child: Text(companyName['OfficeName'])));
+                      }
                     }
                   }
                   return DropdownButtonFormField(
@@ -188,9 +192,11 @@ class _ResultState extends State<Result> {
                       ),
                     );
                     for (var companyName in company!) {
+                      if(companyName['isInverterDeleted'] == false){
                       inverterName.add(DropdownMenuItem(
                           value: companyName.id,
                           child: Text(companyName['InverterName'])));
+                      }
                     }
                   }
                   return DropdownButtonFormField(
@@ -207,20 +213,19 @@ class _ResultState extends State<Result> {
                     isExpanded: true,
                     padding: const EdgeInsets.all(14.0),
                   );
-                }),
-                
+                }),    
                const Divider(
               height: 0.3,
             ),
-
-            const Padding(
-              padding: EdgeInsets.all(9.0),
-              child: Text(
-                'EB Value',
-                style: TextStyle(fontSize: 15),
+            const SizedBox(height: 10),
+             Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('EB Reading',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
               ),
-            ),
-            //const SizedBox(height: 20),
+            const SizedBox(height: 20),
             SizedBox(
               width: screenSize * 0.8,
               height: 230,
@@ -265,15 +270,14 @@ class _ResultState extends State<Result> {
             const Divider(
               height: 0.3,
             ),
-            
-            const Padding(
-              padding: EdgeInsets.all(9.0),
-              child: Text(
-                'Load Value',
-                style: TextStyle(fontSize: 15),
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('Load Value',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
               ),
-            ),
-            //const SizedBox(height: 20),
+            const SizedBox(height: 20),
             SizedBox(
               width: screenSize * 0.8,
               height: 230,
@@ -318,13 +322,14 @@ class _ResultState extends State<Result> {
             const Divider(
               height: 0.3,
             ),
-            const Padding(
-              padding: EdgeInsets.all(9.0),
-              child: Text(
-                'Unit Value',
-                style: TextStyle(fontSize: 15),
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('Unit Value',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
               ),
-            ),
+            const SizedBox(height: 20),
             SizedBox(
               width: screenSize * 0.8,
               height: 230,
@@ -367,6 +372,61 @@ class _ResultState extends State<Result> {
                 ),
               ),
             ),
+
+            const Divider(
+              height: 0.3,
+            ),
+            Container(
+                  height: 40,
+                  color:Colors.orange,
+                  child: const Center(
+                    child: Text('E-Today Value',style: TextStyle(color:Colors.white, fontSize: 16),),
+                  ),
+              ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: screenSize * 0.8,
+              height: 230,
+              child: LineChart(
+                LineChartData(
+                  gridData: const FlGridData(show: true),
+                  titlesData: const FlTitlesData(
+                      show: true,
+                      topTitles:
+                          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(
+                          sideTitles: SideTitles(showTitles: false))),
+                  borderData: FlBorderData(
+                      show: true,
+                      border: const Border(
+                          bottom: BorderSide(color: Colors.black, width: 2),
+                          left: BorderSide(color: Colors.black, width: 2))),
+                  minX: 0,
+                  maxX: eTodayValues.length.toDouble() - 1,
+                  minY: 0,
+                  maxY: eTodayValues.isNotEmpty
+                      ? (eTodayValues.reduce((a, b) =>
+                                  a['value'] > b['value'] ? a : b)['value'] +
+                              10)
+                          .toDouble()
+                      : 100,
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: eTodayValues.asMap().entries.map((entry) {
+                        //final timestamp = entry.value['timestamp'] as DateTime;
+                        final plotvalue = entry.value['value'] as num;
+                        return FlSpot(
+                            entry.key.toDouble(), plotvalue.toDouble());
+                      }).toList(),
+                      isCurved: true,
+                      color: Colors.orange,
+                      dotData: const FlDotData(show: true),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           ],
         ),
       ),
@@ -426,6 +486,33 @@ Future<List<Map<String, dynamic>>> searchForUnitValues(DateTime fromDate,
     }
   }
   return unitValues;
+}
+
+Future<List<Map<String, dynamic>>> searchForeTodayValues(DateTime fromDate,
+    DateTime toDate, String officeId, String inverterId) async {
+  String firestorePath = 'eToday';
+  if (officeId != "0") {
+    firestorePath = 'office_list/$officeId/inverter_list';
+    if (inverterId != "0") {
+      firestorePath = 'office_list/$officeId/inverter_list/$inverterId/eToday';
+    }
+  }
+  final QuerySnapshot querySnapshot =
+      await FirebaseFirestore.instance.collection(firestorePath).get();
+  final List<Map<String, dynamic>> eTodayValues = [];
+  for (var doc in querySnapshot.docs) {
+    final data = doc.data() as Map<String, dynamic>;
+    if (data.containsKey('eTodayValue')) {
+      final loadtimestamp = int.parse(doc.id);
+      final timestamp =
+          DateTime.fromMillisecondsSinceEpoch(loadtimestamp * 1000);
+      if (timestamp.isAfter(fromDate) && timestamp.isBefore(toDate)) {
+        final eTodayValue = data['eTodayValue'] as num;
+        eTodayValues.add({'value': eTodayValue, 'timestamp': timestamp});
+      }
+    }
+  }
+  return eTodayValues;
 }
 
 Future<List<Map<String, dynamic>>> searchForEBReadings(
