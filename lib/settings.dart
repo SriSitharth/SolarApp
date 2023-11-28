@@ -6,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 // ignore: camel_case_types
 class settings extends StatefulWidget {
-  const settings({super.key});
+  const settings({Key? key}): super(key: key);
 
   @override
   State<settings> createState() => _settingsState();
@@ -172,19 +172,20 @@ class _settingsState extends State<settings> {
     return Scaffold(
         appBar: AppBar(title: const Text("Settings")),
         body: Center(
+          
           child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
             // Add some space between buttons and displayed times
+            const Text(
+              'Version : 1.0',
+              style: TextStyle(fontSize: 18,fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 50),
             // Display Morning Time
             Text(
               'Morning Notification : ${morningTime?.format(context) ?? "Not set"}',
-              style: const TextStyle(fontSize: 18),
+              style: const TextStyle(fontSize: 18,fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 20),
-            Text(
-              'Evening Notification : ${eveningTime?.format(context) ?? "Not set"}',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
             ElevatedButton(
               onPressed: () async {
                 morningTime = await _selectTime(context, morningTime);
@@ -194,6 +195,11 @@ class _settingsState extends State<settings> {
                 }
               },
               child: const Text("Select Morning Time"),
+            ),
+            const SizedBox(height: 50),
+            Text(
+              'Evening Notification : ${eveningTime?.format(context) ?? "Not set"}',
+              style: const TextStyle(fontSize: 18,fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 10),
             ElevatedButton(

@@ -137,7 +137,9 @@ class _MyHomePageState extends State<MyHomePage> {
         child: ListView(
           children: <Widget>[
             const DrawerHeader(
-              child: Text("QosteQ"),
+              child: Text("Solar Bill v1.0",
+              style: TextStyle(fontSize: 20,fontWeight: FontWeight.bold),
+              ),
             ),
             ListTile(
               title: const Text('Home'),
@@ -320,7 +322,7 @@ class _MyHomePageState extends State<MyHomePage> {
             ),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp('[0-9.]')),
-              LengthLimitingTextInputFormatter(6)
+              LengthLimitingTextInputFormatter(10)
             ],
             validator: (value) {
               if (value == null || value.isEmpty) {
